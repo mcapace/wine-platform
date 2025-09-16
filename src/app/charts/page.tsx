@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { Wine, ArrowLeft, TrendingUp, BarChart3, PieChart, Activity } from 'lucide-react'
 import Link from 'next/link'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell } from 'recharts'
+import VintageDataViz from '@/components/VintageDataViz'
 
 // Sample vintage data
 const vintageData = [
@@ -267,6 +268,21 @@ export default function ChartsPage() {
               </motion.div>
             </div>
           </div>
+        </div>
+      </section>
+      
+      {/* Advanced Data Visualizations */}
+      <section className="px-6 pb-20">
+        <div className="max-w-7xl mx-auto">
+          <motion.h2
+            className="text-4xl md:text-5xl font-playfair text-center mb-12 text-wine-gold"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
+            Advanced Analytics
+          </motion.h2>
+          <VintageDataViz />
         </div>
       </section>
     </div>

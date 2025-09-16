@@ -1,200 +1,418 @@
 "use client"
 
-import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Wine, Globe, TrendingUp, Star, ArrowRight, Sparkles } from 'lucide-react'
+import { Wine, Star, TrendingUp, Globe, BarChart3, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { OrbitControls, Sphere, Text, Html, Environment } from '@react-three/drei'
+import * as THREE from 'three'
+
+// Particle System Component
+function ParticleSystem() {
+  const pointsRef = useRef<THREE.Points>(null!)
+  
+  useEffect(() => {
+    const geometry = new THREE.BufferGeometry()
+    const positions = new Float32Array(2000 * 3)
+    const colors = new Float32Array(2000 * 3)
+    
+    for (let i = 0; i < 2000; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 20
+      positions[i * 3 + 1] = Math.random() * 10
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 20
+      
+      // Wine-colored particles
+      const color = new THREE.Color()
+      color.setHSL(0.05, 0.8, 0.3 + Math.random() * 0.4)
+      colors[i * 3] = color.r
+      colors[i * 3 + 1] = color.g
+      colors[i * 3 + 2] = color.b
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    pointsRef.current.geometry = geometry
+  }, [])
+  
+  useFrame((state) => {
+    if (pointsRef.current) {
+      pointsRef.current.rotation.y += 0.0005
+      pointsRef.current.rotation.x += 0.0002
+    }
+  })
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry />
+      <pointsMaterial
+        size={0.02}
+        transparent
+        opacity={0.8}
+        sizeAttenuation
+        vertexColors
+      />
+    </points>
+  )
+}
+
+// Floating Wine Bottles
+function FloatingBottles() {
+  const groupRef = useRef<THREE.Group>(null!)
+  
+  useFrame((state) => {
+    if (groupRef.current) {
+      groupRef.current.children.forEach((bottle, index) => {
+        bottle.position.y = Math.sin(state.clock.elapsedTime + index) * 0.5
+        bottle.rotation.y += 0.01
+      })
+    }
+  })
+
+  return (
+    <group ref={groupRef}>
+      {[-3, 0, 3].map((x, index) => (
+        <group key={index} position={[x, 0, -5]}>
+          <mesh>
+            <cylinderGeometry args={[0.3, 0.2, 1.5, 8]} />
+            <meshStandardMaterial
+              color="#8B0000"
+              transparent
+              opacity={0.7}
+              roughness={0.2}
+              metalness={0.8}
+            />
+          </mesh>
+          <mesh position={[0, 0.8, 0]}>
+            <cylinderGeometry args={[0.1, 0.05, 0.3, 8]} />
+            <meshStandardMaterial
+              color="#D4AF37"
+              metalness={0.9}
+              roughness={0.1}
+            />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+// 3D Background Scene
+function BackgroundScene() {
+  return (
+    <Canvas camera={{ position: [0, 5, 10], fov: 60 }}>
+      <Environment preset="sunset" />
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[10, 10, 5]} intensity={0.5} />
+      <pointLight position={[-10, -10, -5]} intensity={0.3} color="#D4AF37" />
+      
+      <ParticleSystem />
+      <FloatingBottles />
+      
+      <OrbitControls
+        enablePan={false}
+        enableZoom={false}
+        enableRotate={true}
+        autoRotate={true}
+        autoRotateSpeed={0.5}
+        minPolarAngle={Math.PI / 3}
+        maxPolarAngle={Math.PI / 1.5}
+      />
+    </Canvas>
+  )
+}
 
 export default function HomePage() {
-  const [count1, setCount1] = useState(0)
-  const [count2, setCount2] = useState(0)
-  const [count3, setCount3] = useState(0)
+  const [mounted, setMounted] = useState(false)
 
-  // Animated counters
   useEffect(() => {
-    const timer1 = setInterval(() => {
-      setCount1(prev => prev < 2500 ? prev + 50 : 2500)
-    }, 30)
-    const timer2 = setInterval(() => {
-      setCount2(prev => prev < 150 ? prev + 3 : 150)
-    }, 30)
-    const timer3 = setInterval(() => {
-      setCount3(prev => prev < 98 ? prev + 2 : 98)
-    }, 30)
-
-    return () => {
-      clearInterval(timer1)
-      clearInterval(timer2)
-      clearInterval(timer3)
-    }
+    setMounted(true)
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-red-950 to-black">
+    <div className="min-h-screen bg-gradient-to-br from-black via-burgundy-950 to-black text-white overflow-hidden">
+      {/* 3D Background */}
+      <div className="fixed inset-0 z-0">
+        {mounted && <BackgroundScene />}
+      </div>
+      
       {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Wine className="w-6 h-6 text-wine-gold" />
-            <span className="text-white font-bold text-xl">Wine Platform</span>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-lg border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+            >
+              <Wine className="w-8 h-8 text-wine-gold" />
+            </motion.div>
+            <span className="text-2xl font-playfair font-bold text-wine-gold">WineVault</span>
           </div>
-          <div className="flex gap-6">
-            <Link href="/" className="text-white/80 hover:text-white transition">Home</Link>
-            <Link href="/regions" className="text-white/80 hover:text-white transition">Regions</Link>
-            <Link href="/charts" className="text-white/80 hover:text-white transition">Charts</Link>
-            <button className="px-4 py-2 bg-wine-gold text-black font-semibold rounded-lg hover:bg-yellow-400 transition">
-              AI Search
-            </button>
+          <div className="hidden md:flex items-center gap-8">
+            <Link href="/regions" className="text-white/80 hover:text-wine-gold transition-colors relative group">
+              Regions
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-wine-gold transition-all group-hover:w-full"></span>
+            </Link>
+            <Link href="/charts" className="text-white/80 hover:text-wine-gold transition-colors relative group">
+              Charts
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-wine-gold transition-all group-hover:w-full"></span>
+            </Link>
+            <Link href="/about" className="text-white/80 hover:text-wine-gold transition-colors relative group">
+              About
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-wine-gold transition-all group-hover:w-full"></span>
+            </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-black to-amber-900/20" />
-          {/* Animated Wine Glass SVG */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-10">
-            <svg width="400" height="600" viewBox="0 0 400 600" className="animate-pulse">
-              <defs>
-                <linearGradient id="wine" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#722F37" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#4A1C1F" stopOpacity="0.8" />
-                </linearGradient>
-              </defs>
-              {/* Wine Glass Shape */}
-              <path d="M 200 100 Q 250 100 250 200 L 230 350 L 200 500 L 200 550 M 200 100 Q 150 100 150 200 L 170 350 L 200 500 M 150 550 L 250 550" 
-                stroke="#D4AF37" strokeWidth="3" fill="none" />
-              {/* Wine Fill Animation */}
-              <path d="M 180 300 Q 200 310 220 300 L 210 350 L 190 350 Z" 
-                fill="url(#wine)" className="wine-fill" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 text-center px-6">
-          <motion.h1 
-            className="text-6xl md:text-8xl font-serif mb-6"
-            initial={{ opacity: 0, y: 30 }}
+      <div className="relative z-10 pt-32 pb-20 px-6">
+        <div className="max-w-7xl mx-auto text-center">
+          <motion.div
+            className="flex justify-center mb-6"
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, delay: 0.2 }}
+          >
+            <Sparkles className="w-12 h-12 text-wine-gold animate-pulse" />
+          </motion.div>
+          
+          <motion.h1
+            className="text-6xl md:text-8xl font-playfair font-bold mb-6"
+            initial={{ opacity: 0, y: -50 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 0.8 }}
             style={{
-              background: 'linear-gradient(135deg, #FFD700, #FFA500, #FF6347)',
+              background: 'linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #B8860B 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              textShadow: '0 0 30px rgba(212, 175, 55, 0.5)',
             }}
           >
-            Wine Platform
+            Wine Vintage
+            <br />
+            <span className="text-5xl md:text-6xl">Charts</span>
           </motion.h1>
           
-          <motion.p 
-            className="text-xl md:text-2xl text-white/80 mb-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            Premium Wine Intelligence & Vintage Analysis
-          </motion.p>
-
-          {/* Animated Stats */}
-          <motion.div 
-            className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mb-12"
+          <motion.p
+            className="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
           >
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-wine-gold">{count1}</div>
-              <div className="text-sm text-white/60 uppercase tracking-wider mt-2">Vintages</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-wine-gold">{count2}</div>
-              <div className="text-sm text-white/60 uppercase tracking-wider mt-2">Regions</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold text-wine-gold">{count3}</div>
-              <div className="text-sm text-white/60 uppercase tracking-wider mt-2">Perfect Scores</div>
-            </div>
-          </motion.div>
+            Discover the world's finest wine regions through interactive vintage charts, 
+            expert ratings, and detailed analysis of the most prestigious vineyards.
+          </motion.p>
 
-          {/* CTA Buttons */}
           <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.5 }}
+            className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
           >
             <Link href="/regions">
-              <button className="group px-8 py-4 bg-gradient-to-r from-wine-burgundy to-red-600 text-white rounded-full text-lg font-semibold hover:from-red-600 hover:to-red-500 transition-all transform hover:scale-105 shadow-2xl">
-                <span className="flex items-center gap-2">
-                  Explore Regions
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </button>
+              <motion.button
+                className="px-8 py-4 bg-gradient-to-r from-wine-gold to-yellow-500 text-black font-bold text-lg rounded-lg hover:from-yellow-500 hover:to-wine-gold transition-all shadow-2xl relative overflow-hidden group"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="relative z-10">Explore Regions</span>
+                <div className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+              </motion.button>
             </Link>
-            
             <Link href="/charts">
-              <button className="group px-8 py-4 glass text-white rounded-full text-lg font-semibold hover:bg-white/10 transition-all transform hover:scale-105">
-                <span className="flex items-center gap-2">
-                  View Charts
-                  <TrendingUp className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </span>
-              </button>
+              <motion.button
+                className="px-8 py-4 border-2 border-wine-gold text-wine-gold font-bold text-lg rounded-lg hover:bg-wine-gold hover:text-black transition-all relative overflow-hidden group backdrop-blur-sm"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="relative z-10">View Charts</span>
+                <div className="absolute inset-0 bg-wine-gold transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+              </motion.button>
             </Link>
           </motion.div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-20 px-6">
-        <div className="max-w-7xl mx-auto">
-          <motion.h2 
-            className="text-4xl md:text-5xl font-serif text-center text-white mb-16"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
+          {/* Enhanced Wine Glass Animation */}
+          <motion.div
+            className="flex justify-center mb-16"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, delay: 0.6 }}
           >
-            Premium Features
-          </motion.h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Globe className="w-12 h-12 text-wine-gold" />,
-                title: "Interactive Maps",
-                description: "Explore wine regions with detailed geographical data and climate information."
-              },
-              {
-                icon: <TrendingUp className="w-12 h-12 text-wine-gold" />,
-                title: "Vintage Charts",
-                description: "Comprehensive vintage analysis with ratings, trends, and investment insights."
-              },
-              {
-                icon: <Sparkles className="w-12 h-12 text-wine-gold" />,
-                title: "AI Recommendations",
-                description: "Personalized wine suggestions based on your preferences and taste profile."
-              }
-            ].map((feature, index) => (
-              <motion.div 
-                key={feature.title}
-                className="glass p-8 rounded-2xl text-center hover:bg-white/10 transition-all"
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.2 }}
-                viewport={{ once: true }}
+            <div className="relative">
+              <motion.div
+                className="absolute inset-0 bg-wine-gold/20 rounded-full blur-xl"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              />
+              <svg
+                width="250"
+                height="350"
+                viewBox="0 0 200 300"
+                className="text-wine-gold relative z-10"
               >
-                <div className="mb-4 flex justify-center">
-                  {feature.icon}
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
-                <p className="text-white/70">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
+                {/* Wine Glass */}
+                <motion.path
+                  d="M100 20 L80 80 L70 250 L130 250 L120 80 Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  opacity="0.9"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 2, delay: 1 }}
+                />
+                {/* Wine Liquid */}
+                <motion.path
+                  d="M100 80 L85 80 L85 180 Q85 200 100 200 Q115 200 115 180 L115 80 Z"
+                  fill="url(#wineGradient)"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 2, delay: 1.5 }}
+                />
+                {/* Bubbles */}
+                <motion.circle
+                  cx="95"
+                  cy="120"
+                  r="2"
+                  fill="rgba(255,255,255,0.6)"
+                  animate={{ cy: [120, 110, 120] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+                <motion.circle
+                  cx="105"
+                  cy="140"
+                  r="1.5"
+                  fill="rgba(255,255,255,0.6)"
+                  animate={{ cy: [140, 130, 140] }}
+                  transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+                />
+                {/* Gradient Definition */}
+                <defs>
+                  <linearGradient id="wineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#8B0000" />
+                    <stop offset="50%" stopColor="#A52A2A" />
+                    <stop offset="100%" stopColor="#8B0000" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </motion.div>
         </div>
-      </section>
+      </div>
+
+      {/* Stats Section */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {[
+            { icon: Globe, label: 'Wine Regions', value: '50+', color: 'text-wine-gold' },
+            { icon: Star, label: 'Expert Ratings', value: '10,000+', color: 'text-amber-400' },
+            { icon: BarChart3, label: 'Vintage Charts', value: '500+', color: 'text-red-400' },
+            { icon: TrendingUp, label: 'Years of Data', value: '100+', color: 'text-green-400' },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              className="text-center p-6 bg-gradient-to-br from-black/60 to-burgundy-900/60 backdrop-blur-lg rounded-xl border border-white/20 hover:border-wine-gold/50 transition-all group"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
+              whileHover={{ scale: 1.05, y: -5 }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+              >
+                <stat.icon className={`w-12 h-12 mx-auto mb-4 ${stat.color}`} />
+              </motion.div>
+              <motion.div 
+                className={`text-3xl font-bold mb-2 ${stat.color}`}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, delay: 1 + index * 0.1 }}
+              >
+                {stat.value}
+              </motion.div>
+              <div className="text-white/80 group-hover:text-white transition-colors">{stat.label}</div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Featured Regions Preview */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-16">
+        <motion.h2
+          className="text-4xl md:text-5xl font-playfair font-bold text-center mb-12 text-wine-gold"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.2 }}
+        >
+          Premium Wine Regions
+        </motion.h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            { name: 'Bordeaux', country: 'France', rating: 95, description: 'World-renowned for prestigious red blends' },
+            { name: 'Napa Valley', country: 'USA', rating: 94, description: 'California\'s premier wine region' },
+            { name: 'Tuscany', country: 'Italy', rating: 93, description: 'Home to Sangiovese-based masterpieces' },
+          ].map((region, index) => (
+            <motion.div
+              key={region.name}
+              className="p-6 bg-gradient-to-br from-black/60 to-burgundy-900/60 backdrop-blur-lg rounded-xl border border-white/20 hover:border-wine-gold/50 transition-all group"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1.4 + index * 0.1 }}
+              whileHover={{ scale: 1.02, y: -5 }}
+            >
+              <h3 className="text-2xl font-playfair font-bold text-wine-gold mb-2 group-hover:text-yellow-400 transition-colors">
+                {region.name}
+              </h3>
+              <p className="text-white/60 text-sm mb-3">{region.country}</p>
+              <div className="flex items-center gap-2 mb-4">
+                <Star className="w-5 h-5 text-amber-400 fill-current" />
+                <span className="text-lg font-semibold">{region.rating}/100</span>
+              </div>
+              <p className="text-white/70 text-sm group-hover:text-white transition-colors">{region.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Call to Action */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 text-center">
+        <motion.div
+          className="bg-gradient-to-r from-wine-gold/20 to-burgundy-800/30 backdrop-blur-lg rounded-2xl p-12 border border-wine-gold/30 hover:border-wine-gold/50 transition-all"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.6 }}
+          whileHover={{ scale: 1.02 }}
+        >
+          <motion.h2
+            className="text-4xl md:text-5xl font-playfair font-bold mb-6 text-wine-gold"
+            animate={{ textShadow: [
+              '0 0 20px rgba(212, 175, 55, 0.5)',
+              '0 0 30px rgba(212, 175, 55, 0.8)',
+              '0 0 20px rgba(212, 175, 55, 0.5)'
+            ] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            Start Your Wine Journey
+          </motion.h2>
+          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+            Explore detailed vintage charts, expert ratings, and discover your next favorite wine region.
+          </p>
+          <Link href="/regions">
+            <motion.button
+              className="px-8 py-4 bg-gradient-to-r from-wine-gold to-yellow-500 text-black font-bold text-lg rounded-lg hover:from-yellow-500 hover:to-wine-gold transition-all shadow-2xl relative overflow-hidden group"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="relative z-10">Explore Now</span>
+              <div className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+            </motion.button>
+          </Link>
+        </motion.div>
+      </div>
     </div>
   )
 }

@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Wine, MapPin, Star, TrendingUp, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import InteractiveGlobe from '@/components/InteractiveGlobe'
+import AdvancedWineMap from '@/components/AdvancedWineMap'
 
 const wineRegions = [
   {
@@ -76,6 +78,7 @@ const wineRegions = [
 
 export default function RegionsPage() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'grid' | 'globe' | 'map'>('grid')
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black via-red-950 to-black">
@@ -107,82 +110,143 @@ export default function RegionsPage() {
             Wine Regions
           </motion.h1>
           <motion.p 
-            className="text-xl text-white/70 max-w-2xl mx-auto"
+            className="text-xl text-white/70 max-w-2xl mx-auto mb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
           >
             Explore the world's most prestigious wine regions and discover their unique characteristics
           </motion.p>
+          
+          {/* View Mode Controls */}
+          <motion.div 
+            className="flex justify-center gap-4 mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <button
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                viewMode === 'grid' 
+                  ? 'bg-wine-gold text-black' 
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+              onClick={() => setViewMode('grid')}
+            >
+              Grid View
+            </button>
+            <button
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                viewMode === 'globe' 
+                  ? 'bg-wine-gold text-black' 
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+              onClick={() => setViewMode('globe')}
+            >
+              3D Globe
+            </button>
+            <button
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                viewMode === 'map' 
+                  ? 'bg-wine-gold text-black' 
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+              onClick={() => setViewMode('map')}
+            >
+              Advanced Map
+            </button>
+          </motion.div>
         </div>
       </section>
 
-      {/* Regions Grid */}
+      {/* Content Area */}
       <section className="px-6 pb-20">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {wineRegions.map((region, index) => (
-              <motion.div
-                key={region.id}
-                className="glass rounded-2xl overflow-hidden hover:bg-white/10 transition-all cursor-pointer group"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => setSelectedRegion(region.id)}
-              >
-                {/* Region Image Placeholder */}
-                <div className={`h-48 bg-gradient-to-br ${region.color} relative overflow-hidden`}>
-                  <div className="absolute inset-0 bg-black/20" />
-                  <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <Star className="w-4 h-4 text-wine-gold fill-current" />
-                    <span className="text-white font-bold">{region.rating}</span>
-                  </div>
-                  <div className="absolute bottom-4 left-4">
-                    <div className="flex items-center gap-2 text-white">
-                      <MapPin className="w-4 h-4" />
-                      <span className="text-sm font-medium">{region.country}</span>
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {wineRegions.map((region, index) => (
+                <motion.div
+                  key={region.id}
+                  className="glass rounded-2xl overflow-hidden hover:bg-white/10 transition-all cursor-pointer group"
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  onClick={() => setSelectedRegion(region.id)}
+                >
+                  {/* Region Image Placeholder */}
+                  <div className={`h-48 bg-gradient-to-br ${region.color} relative overflow-hidden`}>
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute top-4 right-4 flex items-center gap-1 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
+                      <Star className="w-4 h-4 text-wine-gold fill-current" />
+                      <span className="text-white font-bold">{region.rating}</span>
+                    </div>
+                    <div className="absolute bottom-4 left-4">
+                      <div className="flex items-center gap-2 text-white">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm font-medium">{region.country}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Region Info */}
-                <div className="p-6">
-                  <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-wine-gold transition">
-                    {region.name}
-                  </h3>
-                  <p className="text-white/70 mb-4 text-sm">
-                    {region.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mb-4">
+                  {/* Region Info */}
+                  <div className="p-6">
+                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-wine-gold transition">
+                      {region.name}
+                    </h3>
+                    <p className="text-white/70 mb-4 text-sm">
+                      {region.description}
+                    </p>
+                    
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-white/60 text-sm">Latest Vintage</p>
+                        <p className="text-white font-semibold">{region.latestVintage}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-white/60 text-sm">Avg Rating</p>
+                        <p className="text-wine-gold font-bold">{region.rating}/100</p>
+                      </div>
+                    </div>
+
+                    {/* Grape Varieties */}
                     <div>
-                      <p className="text-white/60 text-sm">Latest Vintage</p>
-                      <p className="text-white font-semibold">{region.latestVintage}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-white/60 text-sm">Avg Rating</p>
-                      <p className="text-wine-gold font-bold">{region.rating}/100</p>
-                    </div>
-                  </div>
-
-                  {/* Grape Varieties */}
-                  <div>
-                    <p className="text-white/60 text-sm mb-2">Key Varieties</p>
-                    <div className="flex flex-wrap gap-2">
-                      {region.varieties.map((variety) => (
-                        <span 
-                          key={variety}
-                          className="px-2 py-1 bg-white/10 text-white/80 text-xs rounded-full"
-                        >
-                          {variety}
-                        </span>
-                      ))}
+                      <p className="text-white/60 text-sm mb-2">Key Varieties</p>
+                      <div className="flex flex-wrap gap-2">
+                        {region.varieties.map((variety) => (
+                          <span 
+                            key={variety}
+                            className="px-2 py-1 bg-white/10 text-white/80 text-xs rounded-full"
+                          >
+                            {variety}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+          
+          {viewMode === 'globe' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              <InteractiveGlobe />
+            </motion.div>
+          )}
+          
+          {viewMode === 'map' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              <AdvancedWineMap />
+            </motion.div>
+          )}
         </div>
       </section>
 
