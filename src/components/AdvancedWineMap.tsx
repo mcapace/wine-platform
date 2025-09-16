@@ -1,10 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Sphere, Text, Html, Environment } from '@react-three/drei'
-import * as THREE from 'three'
 import { motion } from 'framer-motion'
+import { MapPin, Star, TrendingUp, Globe } from 'lucide-react'
 
 interface WineRegion {
   id: string
@@ -27,268 +24,115 @@ const wineRegions: WineRegion[] = [
   { id: 'barossa', name: 'Barossa Valley', country: 'Australia', lat: -34.5269, lng: 138.8515, rating: 92, color: '#DC143C', elevation: 0.13, varieties: ['Shiraz', 'Grenache', 'Cabernet Sauvignon'] },
 ]
 
-function TerrainMesh() {
-  const meshRef = useRef<THREE.Mesh>(null!)
-  
-  useEffect(() => {
-    const geometry = new THREE.PlaneGeometry(4, 4, 64, 64)
-    const positions = geometry.attributes.position
-    
-    // Create terrain-like height variation
-    for (let i = 0; i < positions.count; i++) {
-      const x = positions.getX(i)
-      const y = positions.getY(i)
-      const height = Math.sin(x * 2) * Math.cos(y * 2) * 0.1 + 
-                    Math.sin(x * 4) * Math.cos(y * 4) * 0.05 +
-                    Math.random() * 0.02
-      positions.setZ(i, height)
-    }
-    
-    positions.needsUpdate = true
-    geometry.computeVertexNormals()
-  }, [])
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      // Subtle terrain animation
-      const time = state.clock.elapsedTime * 0.1
-      meshRef.current.rotation.x = Math.sin(time) * 0.05
-    }
-  })
-
-  return (
-    <mesh ref={meshRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]}>
-      <planeGeometry args={[4, 4, 64, 64]} />
-      <meshStandardMaterial
-        color="#2d5016"
-        roughness={0.8}
-        metalness={0.1}
-        transparent
-        opacity={0.7}
-      />
-    </mesh>
-  )
-}
-
-function WineRegionTerrain({ region }: { region: WineRegion }) {
-  const [hovered, setHovered] = useState(false)
-  const terrainRef = useRef<THREE.Mesh>(null!)
-  const pinRef = useRef<THREE.Mesh>(null!)
-  
-  // Convert lat/lng to 3D coordinates on terrain
-  const x = (region.lng / 180) * 2
-  const z = (region.lat / 90) * 2
-  const y = region.elevation
-  
-  useFrame((state) => {
-    if (pinRef.current) {
-      pinRef.current.scale.setScalar(hovered ? 1.5 : 1)
-      pinRef.current.position.y = y + Math.sin(state.clock.elapsedTime * 3) * 0.02
-    }
-    
-    if (terrainRef.current) {
-      terrainRef.current.rotation.y += 0.001
-    }
-  })
-
-  return (
-    <group position={[x, y, z]}>
-      {/* Terrain marker */}
-      <mesh
-        ref={terrainRef}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      >
-        <cylinderGeometry args={[0.1, 0.1, 0.02, 8]} />
-        <meshStandardMaterial
-          color={region.color}
-          emissive={region.color}
-          emissiveIntensity={0.2}
-        />
-      </mesh>
-      
-      {/* Pin */}
-      <mesh ref={pinRef}>
-        <sphereGeometry args={[0.03, 16, 16]} />
-        <meshStandardMaterial
-          color={region.color}
-          emissive={region.color}
-          emissiveIntensity={0.4}
-        />
-      </mesh>
-      
-      {/* Glow effect */}
-      <mesh>
-        <sphereGeometry args={[0.05, 16, 16]} />
-        <meshBasicMaterial
-          color={region.color}
-          transparent
-          opacity={0.3}
-        />
-      </mesh>
-      
-      {hovered && (
-        <Html distanceFactor={10}>
-          <div className="bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-white min-w-[250px]">
-            <h3 className="font-bold text-wine-gold text-lg">{region.name}</h3>
-            <p className="text-sm text-gray-300">{region.country}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
-              <span className="text-sm font-semibold">Rating: {region.rating}/100</span>
-            </div>
-            <div className="mt-3">
-              <p className="text-xs text-gray-400 mb-1">Varieties:</p>
-              <div className="flex flex-wrap gap-1">
-                {region.varieties.map((variety, index) => (
-                  <span key={index} className="text-xs bg-white/10 px-2 py-1 rounded">
-                    {variety}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Html>
-      )}
-    </group>
-  )
-}
-
-function AtmosphericParticles() {
-  const pointsRef = useRef<THREE.Points>(null!)
-  
-  useEffect(() => {
-    const geometry = new THREE.BufferGeometry()
-    const positions = new Float32Array(2000 * 3)
-    const colors = new Float32Array(2000 * 3)
-    
-    for (let i = 0; i < 2000; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 10
-      positions[i * 3 + 1] = Math.random() * 2 - 1
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 10
-      
-      // Wine-colored particles
-      const color = new THREE.Color()
-      color.setHSL(0.05, 0.8, 0.3 + Math.random() * 0.4)
-      colors[i * 3] = color.r
-      colors[i * 3 + 1] = color.g
-      colors[i * 3 + 2] = color.b
-    }
-    
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-    pointsRef.current.geometry = geometry
-  }, [])
-  
-  useFrame((state) => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y += 0.0002
-      pointsRef.current.rotation.x += 0.0001
-    }
-  })
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry />
-      <pointsMaterial
-        size={0.02}
-        transparent
-        opacity={0.6}
-        sizeAttenuation
-        vertexColors
-      />
-    </points>
-  )
-}
-
 export default function AdvancedWineMap() {
-  const [selectedRegion, setSelectedRegion] = useState<WineRegion | null>(null)
-  const [viewMode, setViewMode] = useState<'terrain' | 'globe'>('terrain')
-
   return (
     <div className="relative w-full h-[700px] bg-gradient-to-br from-black via-burgundy-950 to-black rounded-xl overflow-hidden">
-      <Canvas camera={{ position: [0, 2, 3], fov: 50 }}>
-        <Environment preset="sunset" />
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[5, 5, 5]} intensity={0.6} />
-        <pointLight position={[-5, -5, -5]} intensity={0.3} color="#D4AF37" />
-        <pointLight position={[0, 5, 0]} intensity={0.4} color="#8B0000" />
+      {/* Map Background */}
+      <div className="absolute inset-0">
+        <div className="w-full h-full bg-gradient-to-br from-green-900/20 via-blue-900/20 to-amber-900/20" />
+        <div className="absolute inset-0 opacity-30">
+          <div className="w-full h-full" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundRepeat: 'repeat'
+          }} />
+        </div>
+      </div>
+      
+      {/* Wine Region Markers */}
+      {wineRegions.map((region, index) => {
+        const x = 50 + (region.lng / 180) * 40
+        const y = 50 + (region.lat / 90) * -30
         
-        {viewMode === 'terrain' ? (
-          <>
-            <TerrainMesh />
-            {wineRegions.map((region) => (
-              <WineRegionTerrain key={region.id} region={region} />
-            ))}
-          </>
-        ) : (
-          <>
-            <Sphere args={[1, 64, 64]}>
-              <meshStandardMaterial
-                color="#1a1a2e"
-                roughness={0.8}
-                metalness={0.2}
-                transparent
-                opacity={0.8}
+        return (
+          <motion.div
+            key={region.id}
+            className="absolute group cursor-pointer"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
+            initial={{ opacity: 0, scale: 0, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            whileHover={{ scale: 1.2, y: -5 }}
+          >
+            {/* Terrain Marker */}
+            <motion.div
+              className="relative"
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 3, repeat: Infinity, delay: index * 0.2 }}
+            >
+              <div 
+                className="w-6 h-6 rounded-full border-2 border-white shadow-lg flex items-center justify-center"
+                style={{ backgroundColor: region.color }}
+              >
+                <MapPin className="w-3 h-3 text-white" />
+              </div>
+              
+              {/* Glow Effect */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ backgroundColor: region.color }}
+                animate={{ 
+                  scale: [1, 1.5, 1],
+                  opacity: [0.3, 0, 0.3]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
               />
-            </Sphere>
-            {wineRegions.map((region) => (
-              <WineRegionTerrain key={region.id} region={region} />
-            ))}
-          </>
-        )}
-        
-        <AtmosphericParticles />
-        
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={2}
-          maxDistance={8}
-          autoRotate={false}
-        />
-      </Canvas>
+            </motion.div>
+            
+            {/* Hover Info */}
+            <div className="absolute top-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+              <div className="bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-4 text-white min-w-[250px]">
+                <h3 className="font-bold text-wine-gold text-lg">{region.name}</h3>
+                <p className="text-sm text-gray-300">{region.country}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
+                  <span className="text-sm font-semibold">Rating: {region.rating}/100</span>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xs text-gray-400 mb-1">Varieties:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {region.varieties.map((variety, varietyIndex) => (
+                      <span key={varietyIndex} className="text-xs bg-white/10 px-2 py-1 rounded">
+                        {variety}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )
+      })}
       
       {/* View Controls */}
       <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg p-4">
-        <h3 className="text-white font-bold mb-3">View Mode</h3>
+        <h3 className="text-white font-bold mb-3">Map View</h3>
         <div className="space-y-2">
-          <motion.button
-            className={`w-full text-left px-3 py-2 rounded transition-colors ${
-              viewMode === 'terrain' ? 'bg-wine-gold text-black' : 'text-white hover:bg-white/10'
-            }`}
-            onClick={() => setViewMode('terrain')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Terrain View
-          </motion.button>
-          <motion.button
-            className={`w-full text-left px-3 py-2 rounded transition-colors ${
-              viewMode === 'globe' ? 'bg-wine-gold text-black' : 'text-white hover:bg-white/10'
-            }`}
-            onClick={() => setViewMode('globe')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Globe View
-          </motion.button>
+          <div className="flex items-center gap-2 text-white text-sm">
+            <Globe className="w-4 h-4 text-wine-gold" />
+            Interactive Wine Regions
+          </div>
+          <div className="flex items-center gap-2 text-white text-sm">
+            <TrendingUp className="w-4 h-4 text-green-400" />
+            Live Data Updates
+          </div>
+          <div className="flex items-center gap-2 text-white text-sm">
+            <Star className="w-4 h-4 text-amber-400" />
+            Expert Ratings
+          </div>
         </div>
         
         <div className="mt-4">
           <h4 className="text-white font-semibold mb-2">Wine Regions</h4>
           <div className="space-y-1 max-h-32 overflow-y-auto">
             {wineRegions.map((region) => (
-              <motion.button
-                key={region.id}
-                className="flex items-center gap-2 text-white text-sm hover:text-wine-gold transition-colors w-full text-left"
-                onClick={() => setSelectedRegion(region)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
+              <div key={region.id} className="flex items-center gap-2 text-white text-sm">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: region.color }} />
                 {region.name}
-              </motion.button>
+              </div>
             ))}
           </div>
         </div>
@@ -317,38 +161,24 @@ export default function AdvancedWineMap() {
         </div>
       </div>
       
-      {/* Selected Region Info */}
-      {selectedRegion && (
-        <motion.div
-          className="absolute bottom-4 left-4 bg-black/90 backdrop-blur-sm border border-white/20 rounded-lg p-4 max-w-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-        >
-          <h3 className="text-wine-gold font-bold text-lg">{selectedRegion.name}</h3>
-          <p className="text-white/80 text-sm">{selectedRegion.country}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-white">Rating:</span>
-            <span className="font-bold text-wine-gold">{selectedRegion.rating}/100</span>
+      {/* Legend */}
+      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg p-4">
+        <h4 className="text-white font-semibold mb-2">Rating Scale</h4>
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center gap-2 text-white">
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <span>90-100: Exceptional</span>
           </div>
-          <div className="mt-3">
-            <p className="text-xs text-gray-400 mb-1">Grape Varieties:</p>
-            <div className="flex flex-wrap gap-1">
-              {selectedRegion.varieties.map((variety, index) => (
-                <span key={index} className="text-xs bg-white/10 px-2 py-1 rounded">
-                  {variety}
-                </span>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 text-white">
+            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+            <span>80-89: Very Good</span>
           </div>
-          <button
-            className="mt-3 text-white/60 hover:text-white transition-colors text-sm"
-            onClick={() => setSelectedRegion(null)}
-          >
-            Close
-          </button>
-        </motion.div>
-      )}
+          <div className="flex items-center gap-2 text-white">
+            <div className="w-3 h-3 rounded-full bg-orange-500" />
+            <span>70-79: Good</span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

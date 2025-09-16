@@ -1,10 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Sphere, Text, Html } from '@react-three/drei'
-import * as THREE from 'three'
 import { motion } from 'framer-motion'
+import { Globe, MapPin, Star } from 'lucide-react'
 
 interface WineRegion {
   id: string
@@ -25,186 +22,106 @@ const wineRegions: WineRegion[] = [
   { id: 'barossa', name: 'Barossa Valley', country: 'Australia', lat: -34.5269, lng: 138.8515, rating: 92, color: '#DC143C' },
 ]
 
-function Globe() {
-  const meshRef = useRef<THREE.Mesh>(null!)
-  const { camera } = useThree()
-  
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.y += 0.001
-    }
-  })
-
-  return (
-    <Sphere ref={meshRef} args={[1, 64, 64]}>
-      <meshStandardMaterial
-        color="#1a1a2e"
-        roughness={0.8}
-        metalness={0.2}
-        transparent
-        opacity={0.8}
-      />
-    </Sphere>
-  )
-}
-
-function WineRegionPin({ region }: { region: WineRegion }) {
-  const [hovered, setHovered] = useState(false)
-  const pinRef = useRef<THREE.Mesh>(null!)
-  
-  // Convert lat/lng to 3D coordinates
-  const phi = (90 - region.lat) * (Math.PI / 180)
-  const theta = (region.lng + 180) * (Math.PI / 180)
-  
-  const x = 1.05 * Math.sin(phi) * Math.cos(theta)
-  const y = 1.05 * Math.cos(phi)
-  const z = 1.05 * Math.sin(phi) * Math.sin(theta)
-  
-  useFrame((state) => {
-    if (pinRef.current) {
-      pinRef.current.scale.setScalar(hovered ? 1.5 : 1)
-      pinRef.current.position.y = y + Math.sin(state.clock.elapsedTime * 2) * 0.02
-    }
-  })
-
-  return (
-    <group position={[x, y, z]}>
-      <mesh
-        ref={pinRef}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-      >
-        <sphereGeometry args={[0.02, 16, 16]} />
-        <meshStandardMaterial
-          color={region.color}
-          emissive={region.color}
-          emissiveIntensity={0.3}
-        />
-      </mesh>
-      
-      {hovered && (
-        <Html distanceFactor={10}>
-          <div className="bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 text-white min-w-[200px]">
-            <h3 className="font-bold text-wine-gold">{region.name}</h3>
-            <p className="text-sm text-gray-300">{region.country}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
-              <span className="text-sm font-semibold">Rating: {region.rating}/100</span>
-            </div>
-          </div>
-        </Html>
-      )}
-    </group>
-  )
-}
-
-function ParticleField() {
-  const pointsRef = useRef<THREE.Points>(null!)
-  
-  useEffect(() => {
-    const geometry = new THREE.BufferGeometry()
-    const positions = new Float32Array(1000 * 3)
-    
-    for (let i = 0; i < 1000; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 10
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 10
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 10
-    }
-    
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    pointsRef.current.geometry = geometry
-  }, [])
-  
-  useFrame((state) => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.x += 0.0005
-      pointsRef.current.rotation.y += 0.001
-    }
-  })
-
-  return (
-    <points ref={pointsRef}>
-      <bufferGeometry />
-      <pointsMaterial
-        color="#D4AF37"
-        size={0.02}
-        transparent
-        opacity={0.6}
-        sizeAttenuation
-      />
-    </points>
-  )
-}
-
 export default function InteractiveGlobe() {
-  const [selectedRegion, setSelectedRegion] = useState<WineRegion | null>(null)
-
   return (
     <div className="relative w-full h-[600px] bg-gradient-to-br from-black via-burgundy-950 to-black rounded-xl overflow-hidden">
-      <Canvas camera={{ position: [0, 0, 3], fov: 45 }}>
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[5, 5, 5]} intensity={0.5} />
-        <pointLight position={[-5, -5, -5]} intensity={0.3} color="#D4AF37" />
+      {/* Animated Globe Background */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <motion.div
+          className="relative"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        >
+          <Globe className="w-96 h-96 text-wine-gold/20" />
+        </motion.div>
+      </div>
+      
+      {/* Wine Region Pins */}
+      {wineRegions.map((region, index) => {
+        // Convert lat/lng to screen coordinates (simplified projection)
+        const x = 50 + (region.lng / 180) * 40 // Scale longitude to screen position
+        const y = 50 + (region.lat / 90) * -30 // Scale latitude to screen position
         
-        <Globe />
-        <ParticleField />
-        
-        {wineRegions.map((region) => (
-          <WineRegionPin key={region.id} region={region} />
-        ))}
-        
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={2}
-          maxDistance={5}
-          autoRotate={true}
-          autoRotateSpeed={0.5}
-        />
-      </Canvas>
+        return (
+          <motion.div
+            key={region.id}
+            className="absolute group cursor-pointer"
+            style={{
+              left: `${x}%`,
+              top: `${y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.2 }}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            {/* Pin */}
+            <motion.div
+              className="w-4 h-4 rounded-full border-2 border-white shadow-lg"
+              style={{ backgroundColor: region.color }}
+              animate={{ 
+                scale: [1, 1.2, 1],
+                boxShadow: [
+                  '0 0 0 0 rgba(255,255,255,0.4)',
+                  '0 0 0 10px rgba(255,255,255,0)',
+                  '0 0 0 0 rgba(255,255,255,0)'
+                ]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            
+            {/* Pin Label */}
+            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-3 text-white min-w-[200px] whitespace-nowrap">
+                <h3 className="font-bold text-wine-gold">{region.name}</h3>
+                <p className="text-sm text-gray-300">{region.country}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
+                  <span className="text-sm font-semibold">Rating: {region.rating}/100</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )
+      })}
       
       {/* Overlay Controls */}
       <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg p-4">
         <h3 className="text-white font-bold mb-2">Wine Regions</h3>
         <div className="space-y-2">
           {wineRegions.map((region) => (
-            <motion.button
-              key={region.id}
-              className="flex items-center gap-2 text-white text-sm hover:text-wine-gold transition-colors"
-              onClick={() => setSelectedRegion(region)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
+            <div key={region.id} className="flex items-center gap-2 text-white text-sm">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
               {region.name}
-            </motion.button>
+            </div>
           ))}
         </div>
       </div>
       
-      {/* Selected Region Info */}
-      {selectedRegion && (
-        <motion.div
-          className="absolute bottom-4 right-4 bg-black/80 backdrop-blur-sm border border-white/20 rounded-lg p-4 max-w-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-        >
-          <h3 className="text-wine-gold font-bold text-lg">{selectedRegion.name}</h3>
-          <p className="text-white/80 text-sm">{selectedRegion.country}</p>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-white">Rating:</span>
-            <span className="font-bold text-wine-gold">{selectedRegion.rating}/100</span>
+      {/* Statistics Panel */}
+      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm border border-white/20 rounded-lg p-4">
+        <h3 className="text-white font-bold mb-3">Region Stats</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between text-white">
+            <span>Total Regions:</span>
+            <span className="text-wine-gold font-semibold">{wineRegions.length}</span>
           </div>
-          <button
-            className="mt-3 text-white/60 hover:text-white transition-colors"
-            onClick={() => setSelectedRegion(null)}
-          >
-            Close
-          </button>
-        </motion.div>
-      )}
+          <div className="flex justify-between text-white">
+            <span>Avg Rating:</span>
+            <span className="text-wine-gold font-semibold">
+              {(wineRegions.reduce((acc, r) => acc + r.rating, 0) / wineRegions.length).toFixed(1)}
+            </span>
+          </div>
+          <div className="flex justify-between text-white">
+            <span>Countries:</span>
+            <span className="text-wine-gold font-semibold">
+              {new Set(wineRegions.map(r => r.country)).size}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

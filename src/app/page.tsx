@@ -3,122 +3,64 @@
 import { motion } from 'framer-motion'
 import { Wine, Star, TrendingUp, Globe, BarChart3, Sparkles } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Sphere, Text, Html, Environment } from '@react-three/drei'
-import * as THREE from 'three'
+import { useEffect, useState } from 'react'
 
-// Particle System Component
+// Particle System Component (CSS-based)
 function ParticleSystem() {
-  const pointsRef = useRef<THREE.Points>(null!)
-  
-  useEffect(() => {
-    const geometry = new THREE.BufferGeometry()
-    const positions = new Float32Array(2000 * 3)
-    const colors = new Float32Array(2000 * 3)
-    
-    for (let i = 0; i < 2000; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 20
-      positions[i * 3 + 1] = Math.random() * 10
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 20
-      
-      // Wine-colored particles
-      const color = new THREE.Color()
-      color.setHSL(0.05, 0.8, 0.3 + Math.random() * 0.4)
-      colors[i * 3] = color.r
-      colors[i * 3 + 1] = color.g
-      colors[i * 3 + 2] = color.b
-    }
-    
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-    pointsRef.current.geometry = geometry
-  }, [])
-  
-  useFrame((state) => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y += 0.0005
-      pointsRef.current.rotation.x += 0.0002
-    }
-  })
-
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry />
-      <pointsMaterial
-        size={0.02}
-        transparent
-        opacity={0.8}
-        sizeAttenuation
-        vertexColors
-      />
-    </points>
-  )
-}
-
-// Floating Wine Bottles
-function FloatingBottles() {
-  const groupRef = useRef<THREE.Group>(null!)
-  
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.children.forEach((bottle, index) => {
-        bottle.position.y = Math.sin(state.clock.elapsedTime + index) * 0.5
-        bottle.rotation.y += 0.01
-      })
-    }
-  })
-
-  return (
-    <group ref={groupRef}>
-      {[-3, 0, 3].map((x, index) => (
-        <group key={index} position={[x, 0, -5]}>
-          <mesh>
-            <cylinderGeometry args={[0.3, 0.2, 1.5, 8]} />
-            <meshStandardMaterial
-              color="#8B0000"
-              transparent
-              opacity={0.7}
-              roughness={0.2}
-              metalness={0.8}
-            />
-          </mesh>
-          <mesh position={[0, 0.8, 0]}>
-            <cylinderGeometry args={[0.1, 0.05, 0.3, 8]} />
-            <meshStandardMaterial
-              color="#D4AF37"
-              metalness={0.9}
-              roughness={0.1}
-            />
-          </mesh>
-        </group>
+    <div className="absolute inset-0 overflow-hidden">
+      {[...Array(50)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-1 h-1 bg-wine-gold/40 rounded-full"
+          style={{
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`,
+          }}
+          animate={{
+            y: [0, -100, 0],
+            opacity: [0, 1, 0],
+            scale: [0, 1, 0],
+          }}
+          transition={{
+            duration: 4 + Math.random() * 2,
+            repeat: Infinity,
+            delay: Math.random() * 2,
+          }}
+        />
       ))}
-    </group>
+    </div>
   )
 }
 
-// 3D Background Scene
-function BackgroundScene() {
+// Floating Wine Bottles (CSS-based)
+function FloatingBottles() {
   return (
-    <Canvas camera={{ position: [0, 5, 10], fov: 60 }}>
-      <Environment preset="sunset" />
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[10, 10, 5]} intensity={0.5} />
-      <pointLight position={[-10, -10, -5]} intensity={0.3} color="#D4AF37" />
-      
-      <ParticleSystem />
-      <FloatingBottles />
-      
-      <OrbitControls
-        enablePan={false}
-        enableZoom={false}
-        enableRotate={true}
-        autoRotate={true}
-        autoRotateSpeed={0.5}
-        minPolarAngle={Math.PI / 3}
-        maxPolarAngle={Math.PI / 1.5}
-      />
-    </Canvas>
+    <div className="absolute inset-0 overflow-hidden">
+      {[-3, 0, 3].map((x, index) => (
+        <motion.div
+          key={index}
+          className="absolute"
+          style={{
+            left: `${50 + x * 15}%`,
+            top: '60%',
+          }}
+          animate={{
+            y: [0, -20, 0],
+            rotate: [0, 5, -5, 0],
+          }}
+          transition={{
+            duration: 3 + index * 0.5,
+            repeat: Infinity,
+            delay: index * 0.5,
+          }}
+        >
+          <div className="w-16 h-24 bg-gradient-to-b from-wine-gold/20 to-burgundy-900/40 rounded-lg border border-wine-gold/30 flex items-center justify-center">
+            <Wine className="w-8 h-8 text-wine-gold" />
+          </div>
+        </motion.div>
+      ))}
+    </div>
   )
 }
 
@@ -131,9 +73,14 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-burgundy-950 to-black text-white overflow-hidden">
-      {/* 3D Background */}
+      {/* Animated Background */}
       <div className="fixed inset-0 z-0">
-        {mounted && <BackgroundScene />}
+        {mounted && (
+          <>
+            <ParticleSystem />
+            <FloatingBottles />
+          </>
+        )}
       </div>
       
       {/* Navigation */}
